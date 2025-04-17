@@ -1,4 +1,4 @@
-# Png Placer v1.5 - Visual Centering + Scaled Placement
+# Png Placer - Fully Patched Version with Progress Bar and Placement Fixes
 import streamlit as st
 from PIL import Image, ImageDraw, ImageFont, ImageOps, ImageChops
 import os
@@ -12,7 +12,6 @@ st.set_page_config(page_title="Png Placer", layout="wide")
 st.title("Png Placer")
 
 pngs = []
-
 uploaded_files = st.file_uploader("Upload PNGs or a ZIP file", type=['png', 'zip'], accept_multiple_files=True)
 line1 = st.text_input("Line 1")
 line2 = st.text_input("Line 2")
@@ -38,13 +37,11 @@ def trim_transparency(img):
 
 def place_graphic_on_mockup(graphic):
     trimmed = trim_transparency(graphic)
-    resized = Image.new("RGBA", trimmed.size, (255, 255, 255, 0))
     trimmed.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
-    resized = trimmed
-    x = red_box[0] + (max_width - resized.width) // 2
-    y = red_box[1] + (max_height - resized.height) // 2
+    x = red_box[0] + (max_width - trimmed.width) // 2
+    y = red_box[1] + (max_height - trimmed.height) // 2
     canvas_img = mockup.copy()
-    canvas_img.paste(resized, (x, y), resized)
+    canvas_img.paste(trimmed, (x, y), trimmed)
     return canvas_img
 
 def generate_smart_title(name):
@@ -88,53 +85,53 @@ if text_lines:
     preview = draw_text_overlay(text_lines, include_heart)
     st.image(preview, caption="Text + Heart Preview", use_container_width=True)
 
+if uploaded_files:
+    for file in uploaded_files:
+        if file.name.endswith('.zip'):
+            with zipfile.ZipFile(file, 'r') as zip_ref:
+                for name in zip_ref.namelist():
+                    if name.endswith('.png'):
+                        with zip_ref.open(name) as image_file:
+                            img = Image.open(image_file).convert("RGBA")
+                            pngs.append((name, img))
+        elif file.name.endswith('.png'):
+            img = Image.open(file).convert("RGBA")
+            pngs.append((file.name, img))
+
 selected_titles = []
 mockup_zip = io.BytesIO()
 
 if pngs:
     st.subheader("Generated Mockups")
+    progress = st.progress(0)
+    total = len(pngs)
+    count = 0
+
     with zipfile.ZipFile(mockup_zip, "w") as zip_mock:
-        progress = st.progress(0)
-        total = len(pngs)
-        count = 0
         for name, graphic in pngs:
             title = generate_smart_title(name)
             st.markdown(f"**{title}** ({len(title)} / 200 characters including Amazon suffix)")
             trimmed_graphic = trim_transparency(graphic)
             mock_img = place_graphic_on_mockup(trimmed_graphic)
+
             col1, col2 = st.columns([4, 1])
             with col1:
                 st.image(mock_img, caption=title, use_container_width=True)
             with col2:
                 if st.button(f"Regenerate '{title}'", key=f"regen_{title}"):
-                    mock_img = place_graphic_on_mockup(graphic)
+                    mock_img = place_graphic_on_mockup(trimmed_graphic)
                 if st.checkbox(f"Submit '{title}' to uploader", value=True, key=f"chk_{title}"):
-                    selected_titles.append((title, mock_img, graphic))
+                    selected_titles.append((title, mock_img, trimmed_graphic))
+
             img_bytes = io.BytesIO()
             mock_img.save(img_bytes, format='PNG')
             st.download_button(f"Download {title}.png", img_bytes.getvalue(), file_name=f"{title}.png", mime="image/png", key=f"dl_{title}")
             zip_mock.writestr(f"{title}.png", img_bytes.getvalue())
-            generate_print_pdf(title, graphic)
+
+            generate_print_pdf(title, trimmed_graphic)
+
+            count += 1
+            progress.progress(count / total)
 
     mockup_zip.seek(0)
     st.download_button("Download All Mockups (ZIP)", mockup_zip, "Mockups.zip")
-
-    if st.button("Submit Selected to Uploader"):
-        for title, mock_img, _ in selected_titles:
-            try:
-                img_bytes = io.BytesIO()
-                mock_img.save(img_bytes, format='PNG')
-                img_bytes.seek(0)
-                response = requests.post(
-                    "https://your-uploader-app.com/upload",
-                    files={"file": (f"{title}.png", img_bytes, "image/png")},
-                    data={"title": title},
-                    headers={"Authorization": "Bearer YOUR_API_KEY"}
-                )
-                if response.status_code == 200:
-                    st.success(f"✅ Submitted {title}.png to uploader!")
-                else:
-                    st.error(f"❌ Failed to submit {title}. Status code: {response.status_code}")
-            except Exception as e:
-                st.error(f"❌ Error uploading {title}: {str(e)}")
-        st.balloons()

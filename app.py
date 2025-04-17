@@ -39,7 +39,7 @@ def place_graphic_on_mockup(graphic):
     trimmed = trim_transparency(graphic)
     trimmed.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
     x = red_box[0] + (max_width - trimmed.width) // 2
-    y = red_box[1] + (max_height - trimmed.height) // 2
+    y = red_box[1]
     canvas_img = mockup.copy()
     canvas_img.paste(trimmed, (x, y), trimmed)
     return canvas_img

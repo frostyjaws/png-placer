@@ -1,0 +1,6 @@
+streamlit
+Pillow
+reportlab
+requests
+svglib
+cairosvg

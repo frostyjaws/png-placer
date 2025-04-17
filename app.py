@@ -72,7 +72,9 @@ def draw_text_overlay(lines, include_heart):
         canvas.paste(heart, (x, y + 50), heart)
     return canvas
 
-def generate_print_pdf(title, graphic):
+def generate_print_pdf(title, trimmed_graphic)
+            count += 1
+            progress.progress(count / total):
     file_path = os.path.join(pdf_output_dir, f"{title}.pdf")
     c = canvas.Canvas(file_path, pagesize=A4)
     width, height = A4
@@ -95,10 +97,14 @@ mockup_zip = io.BytesIO()
 if pngs:
     st.subheader("Generated Mockups")
     with zipfile.ZipFile(mockup_zip, "w") as zip_mock:
+        progress = st.progress(0)
+        total = len(pngs)
+        count = 0
         for name, graphic in pngs:
             title = generate_smart_title(name)
             st.markdown(f"**{title}** ({len(title)} / 200 characters including Amazon suffix)")
-            mock_img = place_graphic_on_mockup(graphic)
+            trimmed_graphic = trim_transparency(graphic)
+            mock_img = place_graphic_on_mockup(trimmed_graphic)
             col1, col2 = st.columns([4, 1])
             with col1:
                 st.image(mock_img, caption=title, use_container_width=True)

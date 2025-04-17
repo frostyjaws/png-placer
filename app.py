@@ -11,6 +11,8 @@ from reportlab.lib.pagesizes import A4
 st.set_page_config(page_title="Png Placer", layout="wide")
 st.title("Png Placer")
 
+pngs = []
+
 uploaded_files = st.file_uploader("Upload PNGs or a ZIP file", type=['png', 'zip'], accept_multiple_files=True)
 line1 = st.text_input("Line 1")
 line2 = st.text_input("Line 2")

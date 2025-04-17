@@ -1,4 +1,4 @@
-# Png Placer v1.4 - Auto-trim transparent padding before placement
+# Png Placer v1.5 - Visual Centering + Scaled Placement
 import streamlit as st
 from PIL import Image, ImageDraw, ImageFont, ImageOps, ImageChops
 import os
@@ -34,27 +34,15 @@ def trim_transparency(img):
     bbox = diff.getbbox()
     return img.crop(bbox) if bbox else img
 
-pngs = []
-if uploaded_files:
-    for file in uploaded_files:
-        if file.name.endswith('.zip'):
-            with zipfile.ZipFile(file, 'r') as zip_ref:
-                for name in zip_ref.namelist():
-                    if name.endswith('.png'):
-                        with zip_ref.open(name) as image_file:
-                            img = Image.open(image_file).convert("RGBA")
-                            pngs.append((name, img))
-        elif file.name.endswith('.png'):
-            img = Image.open(file).convert("RGBA")
-            pngs.append((file.name, img))
-
 def place_graphic_on_mockup(graphic):
     trimmed = trim_transparency(graphic)
+    resized = Image.new("RGBA", trimmed.size, (255, 255, 255, 0))
     trimmed.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
-    x = red_box[0] + (max_width - trimmed.width) // 2 - 20
-    y = red_box[1] + (max_height - trimmed.height) // 2
+    resized = trimmed
+    x = red_box[0] + (max_width - resized.width) // 2
+    y = red_box[1] + (max_height - resized.height) // 2
     canvas_img = mockup.copy()
-    canvas_img.paste(trimmed, (x, y), trimmed)
+    canvas_img.paste(resized, (x, y), resized)
     return canvas_img
 
 def generate_smart_title(name):

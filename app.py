@@ -73,14 +73,11 @@ def draw_text_overlay(lines, include_heart):
     return canvas
 
 def generate_print_pdf(title, trimmed_graphic):
-            count += 1
-            progress.progress(count / total)
     file_path = os.path.join(pdf_output_dir, f"{title}.pdf")
     c = canvas.Canvas(file_path, pagesize=A4)
     width, height = A4
-    trimmed = trim_transparency(graphic)
     temp_path = f"/tmp/{title}.png"
-    trimmed.save(temp_path)
+    trimmed_graphic.save(temp_path)
     c.drawImage(temp_path, 100, 300, width=400, preserveAspectRatio=True, mask='auto')
     c.showPage()
     c.save()

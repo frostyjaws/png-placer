@@ -1,6 +1,6 @@
 # Png Placer v1.3 - Save PDFs to Local OneDrive Folder
 import streamlit as st
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 import os
 import zipfile
 import io
@@ -44,7 +44,7 @@ if uploaded_files:
 
 def place_graphic_on_mockup(graphic):
     resized = graphic.copy()
-    resized.thumbnail((max_width, max_height), Image.ANTIALIAS)
+    resized.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
     x = red_box[0] + (max_width - resized.width) // 2 - 20
     y = red_box[1] + (max_height - resized.height) // 2
     canvas_img = mockup.copy()

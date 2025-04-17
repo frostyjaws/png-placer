@@ -18,7 +18,7 @@ line3 = st.text_input("Line 3")
 line4 = st.text_input("Line 4")
 include_heart = st.checkbox("Include Heart Graphic", value=True)
 
-mockup = Image.open("assets/Mockup.png").convert("RGBA")
+mockup = Image.open("assets/mockup.png").convert("RGBA")
 heart = Image.open("assets/watercolor_heart.png").convert("RGBA")
 font_path = "assets/AmaticSC-Regular.ttf"
 red_box = (220, 300, 880, 1100)
@@ -100,21 +100,18 @@ if pngs:
                 img_bytes = io.BytesIO()
                 mock_img.save(img_bytes, format='PNG')
                 img_bytes.seek(0)
-
                 response = requests.post(
-                    "https://your-uploader-app.com/upload",  # <-- Replace with your real URL
+                    "https://your-uploader-app.com/upload",
                     files={"file": (f"{title}.png", img_bytes, "image/png")},
                     data={"title": title},
-                    headers={"Authorization": "Bearer YOUR_API_KEY"}  # <-- Replace or remove if not needed
+                    headers={"Authorization": "Bearer YOUR_API_KEY"}
                 )
-
                 if response.status_code == 200:
                     st.success(f"✅ Submitted {title}.png to uploader!")
                 else:
                     st.error(f"❌ Failed to submit {title}. Status code: {response.status_code}")
             except Exception as e:
                 st.error(f"❌ Error uploading {title}: {str(e)}")
-
         st.balloons()
 
     with io.BytesIO() as zip_buf:

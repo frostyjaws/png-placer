@@ -1,6 +1,6 @@
-# Png Placer v1.3 - Save PDFs to Local OneDrive Folder
+# Png Placer v1.4 - Auto-trim transparent padding before placement
 import streamlit as st
-from PIL import Image, ImageDraw, ImageFont, ImageOps
+from PIL import Image, ImageDraw, ImageFont, ImageOps, ImageChops
 import os
 import zipfile
 import io
@@ -28,6 +28,12 @@ max_height = red_box[3] - red_box[1]
 pdf_output_dir = r"C:\\Users\\sfbuc\\OneDrive\\Graphic Tee SVGS\\Png Placer"
 os.makedirs(pdf_output_dir, exist_ok=True)
 
+def trim_transparency(img):
+    bg = Image.new(img.mode, img.size, (0, 0, 0, 0))
+    diff = ImageChops.difference(img, bg)
+    bbox = diff.getbbox()
+    return img.crop(bbox) if bbox else img
+
 pngs = []
 if uploaded_files:
     for file in uploaded_files:
@@ -43,12 +49,12 @@ if uploaded_files:
             pngs.append((file.name, img))
 
 def place_graphic_on_mockup(graphic):
-    resized = graphic.copy()
-    resized.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
-    x = red_box[0] + (max_width - resized.width) // 2 - 20
-    y = red_box[1] + (max_height - resized.height) // 2
+    trimmed = trim_transparency(graphic)
+    trimmed.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
+    x = red_box[0] + (max_width - trimmed.width) // 2 - 20
+    y = red_box[1] + (max_height - trimmed.height) // 2
     canvas_img = mockup.copy()
-    canvas_img.paste(resized, (x, y), resized)
+    canvas_img.paste(trimmed, (x, y), trimmed)
     return canvas_img
 
 def generate_smart_title(name):
@@ -80,8 +86,9 @@ def generate_print_pdf(title, graphic):
     file_path = os.path.join(pdf_output_dir, f"{title}.pdf")
     c = canvas.Canvas(file_path, pagesize=A4)
     width, height = A4
+    trimmed = trim_transparency(graphic)
     temp_path = f"/tmp/{title}.png"
-    graphic.save(temp_path)
+    trimmed.save(temp_path)
     c.drawImage(temp_path, 100, 300, width=400, preserveAspectRatio=True, mask='auto')
     c.showPage()
     c.save()
@@ -90,7 +97,7 @@ def generate_print_pdf(title, graphic):
 text_lines = [line for line in [line1, line2, line3, line4] if line.strip() != ""]
 if text_lines:
     preview = draw_text_overlay(text_lines, include_heart)
-    st.image(preview, caption="Text + Heart Preview", use_column_width=True)
+    st.image(preview, caption="Text + Heart Preview", use_container_width=True)
 
 selected_titles = []
 mockup_zip = io.BytesIO()
@@ -104,7 +111,7 @@ if pngs:
             mock_img = place_graphic_on_mockup(graphic)
             col1, col2 = st.columns([4, 1])
             with col1:
-                st.image(mock_img, caption=title, use_column_width=True)
+                st.image(mock_img, caption=title, use_container_width=True)
             with col2:
                 if st.button(f"Regenerate '{title}'", key=f"regen_{title}"):
                     mock_img = place_graphic_on_mockup(graphic)
@@ -114,8 +121,6 @@ if pngs:
             mock_img.save(img_bytes, format='PNG')
             st.download_button(f"Download {title}.png", img_bytes.getvalue(), file_name=f"{title}.png", mime="image/png", key=f"dl_{title}")
             zip_mock.writestr(f"{title}.png", img_bytes.getvalue())
-
-            # Save PDF directly to user's OneDrive folder
             generate_print_pdf(title, graphic)
 
     mockup_zip.seek(0)

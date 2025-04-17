@@ -72,7 +72,7 @@ def draw_text_overlay(lines, include_heart):
         canvas.paste(heart, (x, y + 50), heart)
     return canvas
 
-def generate_print_pdf(title, trimmed_graphic)
+def generate_print_pdf(title, trimmed_graphic):
             count += 1
             progress.progress(count / total):
     file_path = os.path.join(pdf_output_dir, f"{title}.pdf")

@@ -1,4 +1,4 @@
-# Png Placer v1.2 - Mockup + PDF Export + Download Buttons
+# Png Placer v1.3 - Save PDFs to Local OneDrive Folder
 import streamlit as st
 from PIL import Image, ImageDraw, ImageFont
 import os
@@ -24,6 +24,9 @@ font_path = "assets/AmaticSC-Regular.ttf"
 red_box = (220, 300, 880, 1100)
 max_width = red_box[2] - red_box[0]
 max_height = red_box[3] - red_box[1]
+
+pdf_output_dir = r"C:\\Users\\sfbuc\\OneDrive\\Graphic Tee SVGS\\Png Placer"
+os.makedirs(pdf_output_dir, exist_ok=True)
 
 pngs = []
 if uploaded_files:
@@ -74,16 +77,15 @@ def draw_text_overlay(lines, include_heart):
     return canvas
 
 def generate_print_pdf(title, graphic):
-    buf = io.BytesIO()
-    c = canvas.Canvas(buf, pagesize=A4)
+    file_path = os.path.join(pdf_output_dir, f"{title}.pdf")
+    c = canvas.Canvas(file_path, pagesize=A4)
     width, height = A4
     temp_path = f"/tmp/{title}.png"
     graphic.save(temp_path)
     c.drawImage(temp_path, 100, 300, width=400, preserveAspectRatio=True, mask='auto')
     c.showPage()
     c.save()
-    buf.seek(0)
-    return buf
+    return file_path
 
 text_lines = [line for line in [line1, line2, line3, line4] if line.strip() != ""]
 if text_lines:
@@ -92,11 +94,10 @@ if text_lines:
 
 selected_titles = []
 mockup_zip = io.BytesIO()
-pdf_zip = io.BytesIO()
 
 if pngs:
     st.subheader("Generated Mockups")
-    with zipfile.ZipFile(mockup_zip, "w") as zip_mock, zipfile.ZipFile(pdf_zip, "w") as zip_pdf:
+    with zipfile.ZipFile(mockup_zip, "w") as zip_mock:
         for name, graphic in pngs:
             title = generate_smart_title(name)
             st.markdown(f"**{title}** ({len(title)} / 200 characters including Amazon suffix)")
@@ -109,20 +110,16 @@ if pngs:
                     mock_img = place_graphic_on_mockup(graphic)
                 if st.checkbox(f"Submit '{title}' to uploader", value=True, key=f"chk_{title}"):
                     selected_titles.append((title, mock_img, graphic))
-            # Individual mockup download
             img_bytes = io.BytesIO()
             mock_img.save(img_bytes, format='PNG')
             st.download_button(f"Download {title}.png", img_bytes.getvalue(), file_name=f"{title}.png", mime="image/png", key=f"dl_{title}")
             zip_mock.writestr(f"{title}.png", img_bytes.getvalue())
 
-            # Generate and add print PDF
-            pdf_bytes = generate_print_pdf(title, graphic)
-            zip_pdf.writestr(f"{title}.pdf", pdf_bytes.read())
+            # Save PDF directly to user's OneDrive folder
+            generate_print_pdf(title, graphic)
 
     mockup_zip.seek(0)
-    pdf_zip.seek(0)
     st.download_button("Download All Mockups (ZIP)", mockup_zip, "Mockups.zip")
-    st.download_button("Download All Print PDFs (ZIP)", pdf_zip, "PrintFiles.zip")
 
     if st.button("Submit Selected to Uploader"):
         for title, mock_img, _ in selected_titles:

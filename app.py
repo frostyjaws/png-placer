@@ -1,4 +1,4 @@
-# Png Placer v1.1 - With Heart Toggle, Font Scaling, Char Count, Regenerate
+# Png Placer v1.2 - Mockup + PDF Export + Download Buttons
 import streamlit as st
 from PIL import Image, ImageDraw, ImageFont
 import os
@@ -73,26 +73,56 @@ def draw_text_overlay(lines, include_heart):
         canvas.paste(heart, (x, y + 50), heart)
     return canvas
 
+def generate_print_pdf(title, graphic):
+    buf = io.BytesIO()
+    c = canvas.Canvas(buf, pagesize=A4)
+    width, height = A4
+    temp_path = f"/tmp/{title}.png"
+    graphic.save(temp_path)
+    c.drawImage(temp_path, 100, 300, width=400, preserveAspectRatio=True, mask='auto')
+    c.showPage()
+    c.save()
+    buf.seek(0)
+    return buf
+
 text_lines = [line for line in [line1, line2, line3, line4] if line.strip() != ""]
 if text_lines:
     preview = draw_text_overlay(text_lines, include_heart)
     st.image(preview, caption="Text + Heart Preview", use_column_width=True)
 
 selected_titles = []
+mockup_zip = io.BytesIO()
+pdf_zip = io.BytesIO()
+
 if pngs:
     st.subheader("Generated Mockups")
-    for name, graphic in pngs:
-        title = generate_smart_title(name)
-        st.markdown(f"**{title}** ({len(title)} / 200 characters including Amazon suffix)")
-        mock_img = place_graphic_on_mockup(graphic)
-        col1, col2 = st.columns([4, 1])
-        with col1:
-            st.image(mock_img, caption=title, use_column_width=True)
-        with col2:
-            if st.button(f"Regenerate '{title}'", key=f"regen_{title}"):
-                mock_img = place_graphic_on_mockup(graphic)
-            if st.checkbox(f"Submit '{title}' to uploader", value=True, key=f"chk_{title}"):
-                selected_titles.append((title, mock_img, graphic))
+    with zipfile.ZipFile(mockup_zip, "w") as zip_mock, zipfile.ZipFile(pdf_zip, "w") as zip_pdf:
+        for name, graphic in pngs:
+            title = generate_smart_title(name)
+            st.markdown(f"**{title}** ({len(title)} / 200 characters including Amazon suffix)")
+            mock_img = place_graphic_on_mockup(graphic)
+            col1, col2 = st.columns([4, 1])
+            with col1:
+                st.image(mock_img, caption=title, use_column_width=True)
+            with col2:
+                if st.button(f"Regenerate '{title}'", key=f"regen_{title}"):
+                    mock_img = place_graphic_on_mockup(graphic)
+                if st.checkbox(f"Submit '{title}' to uploader", value=True, key=f"chk_{title}"):
+                    selected_titles.append((title, mock_img, graphic))
+            # Individual mockup download
+            img_bytes = io.BytesIO()
+            mock_img.save(img_bytes, format='PNG')
+            st.download_button(f"Download {title}.png", img_bytes.getvalue(), file_name=f"{title}.png", mime="image/png", key=f"dl_{title}")
+            zip_mock.writestr(f"{title}.png", img_bytes.getvalue())
+
+            # Generate and add print PDF
+            pdf_bytes = generate_print_pdf(title, graphic)
+            zip_pdf.writestr(f"{title}.pdf", pdf_bytes.read())
+
+    mockup_zip.seek(0)
+    pdf_zip.seek(0)
+    st.download_button("Download All Mockups (ZIP)", mockup_zip, "Mockups.zip")
+    st.download_button("Download All Print PDFs (ZIP)", pdf_zip, "PrintFiles.zip")
 
     if st.button("Submit Selected to Uploader"):
         for title, mock_img, _ in selected_titles:
@@ -113,12 +143,3 @@ if pngs:
             except Exception as e:
                 st.error(f"❌ Error uploading {title}: {str(e)}")
         st.balloons()
-
-    with io.BytesIO() as zip_buf:
-        with zipfile.ZipFile(zip_buf, "w") as z:
-            for title, mock_img, _ in selected_titles:
-                img_byte_arr = io.BytesIO()
-                mock_img.save(img_byte_arr, format='PNG')
-                z.writestr(f"{title}.png", img_byte_arr.getvalue())
-        zip_buf.seek(0)
-        st.download_button("Download All Mockups (ZIP)", zip_buf, "Mockups.zip")
